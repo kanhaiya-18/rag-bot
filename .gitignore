@@ -3,3 +3,7 @@ __pycache__/
 *.py[cod]
 
 .env
+dbms.pdf
+sample.pdf
+temp.py
+sample_chromaDB/

@@ -20,3 +20,11 @@ class userResponse(BaseModel):
 class userLogin(BaseModel):
     email: EmailStr
     password: str
+
+class authMW(BaseModel):
+    id : str
+    name: str
+    email: EmailStr
+
+class questionSchema(BaseModel):
+    question : str
