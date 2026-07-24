@@ -3,7 +3,7 @@ from qdrant_client.models import Distance, VectorParams
 from core.config import settings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
-
+from qdrant_client.models import PayloadSchemaType
 
 client = QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
 COLLECTION_NAME = "documents"
@@ -19,6 +19,16 @@ if COLLECTION_NAME not in [c.name for c in collections]:
             distance=Distance.COSINE,
         ),
     )
+    
+
+try:
+    client.create_payload_index(
+        collection_name=COLLECTION_NAME,
+        field_name="metadata.user_email",
+        field_schema=PayloadSchemaType.KEYWORD,
+    )
+except Exception as e:
+    print(e)
 
 
 # info = client.get_collection("documents_v2")

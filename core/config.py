@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     CLOUDINARY_CLOUD_NAME: str
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
+    POSTGRES_URL: str
 
     model_config = SettingsConfigDict(
         env_file=str(BASE_DIR / ".env"),

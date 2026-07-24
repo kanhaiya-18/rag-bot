@@ -11,6 +11,7 @@ db = client["ragbot"]
 
 user_collection = db["users"]
 documets = db["documents"]
+chat_collection = db["chats"]
 
 
 async def get_db():

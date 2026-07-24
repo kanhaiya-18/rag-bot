@@ -26,5 +26,6 @@ class authMW(BaseModel):
     name: str
     email: EmailStr
 
-class questionSchema(BaseModel):
-    question : str
+class QuestionSchema(BaseModel):
+    question: str
+    thread_id: str | None = None
