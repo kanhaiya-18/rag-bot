@@ -12,12 +12,12 @@ def extract_text(pdf_bytes):
     docs.close()
     return text 
 
-def split_text(text,file: UploadFile,inserted_id,cloudinary_public_id,user):
+def split_text(text,filename: str,inserted_id,cloudinary_public_id,user):
     splitter  = RecursiveCharacterTextSplitter(chunk_size=3000,chunk_overlap=200)
     documents = splitter.create_documents(
         [text],
         metadatas=[{
-            "filename": file.filename,
+            "filename": filename,
             "mongo_id": str(inserted_id),
             "public_id": cloudinary_public_id,
             "user_email" : user.get("email")

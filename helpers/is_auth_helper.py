@@ -15,7 +15,7 @@ async def is_auth(request:Request,db: AsyncIOMotorDatabase=Depends(get_db)):
         payload = jwt.decode(token,settings.SECRET_KEY,algorithms=[settings.ALGORITHM])
     except Exception as e:
         raise HTTPException(401, detail="unauthorized user")
-    user = await user_collection.find_one({"_id" : ObjectId(payload.get("_id"))})
+    user = await user_collection.find_one({"_id" : ObjectId(payload.get("_id"))},{"password" : 0})
     if not user: 
         raise HTTPException(401, detail="unauthorized user")
     # print(user)

@@ -27,6 +27,11 @@ try:
         field_name="metadata.user_email",
         field_schema=PayloadSchemaType.KEYWORD,
     )
+    client.create_payload_index(
+        collection_name=COLLECTION_NAME,
+        field_name="metadata.mongo_id",
+        field_schema=PayloadSchemaType.KEYWORD,
+    )
 except Exception as e:
     print(e)
 
