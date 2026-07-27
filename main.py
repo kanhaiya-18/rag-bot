@@ -7,14 +7,20 @@ from core.config import settings
 from helpers.graph import builder
 from fastapi.middleware.cors import CORSMiddleware
 
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
+# Initialize rate limiter using client IP address
+limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+
 checkpointer = AsyncPostgresSaver.from_conn_string(
     settings.POSTGRES_URL
 )
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
-
     async with AsyncPostgresSaver.from_conn_string(
         settings.POSTGRES_URL
     ) as checkpointer:
@@ -26,8 +32,16 @@ async def lifespan(app: FastAPI):
         )
 
         yield
-origins = "http://localhost:5173/"
+
+origins = ["http://localhost:5173", "http://10.147.189.8:5173"]
+
 app = FastAPI(lifespan=lifespan)
+
+# Attach rate-limiter to application state & register middleware & exception handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -35,4 +49,5 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 app.include_router(userRouter)

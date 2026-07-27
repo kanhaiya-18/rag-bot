@@ -1,5 +1,5 @@
 from fastapi import HTTPException,status
-
+from utils.llm import model
 from langchain_core.messages import HumanMessage
 from uuid import uuid4
 from db.database import user_collection,chat_collection
@@ -24,6 +24,7 @@ async def ask_question(graph,user, question):
         if not chat:
             raise HTTPException(status_code=404, detail="Chat thread not found")
         
+        title = chat.get("title", "")
         # Update thread timestamp
         await chat_collection.update_one(
             {"thread_id": thread_id},
@@ -31,8 +32,14 @@ async def ask_question(graph,user, question):
         )
     else:
         thread_id = str(uuid4())
+        prompt_for_title = f"""give a title to the context dont write anything else because im writing the same thing that you are 
+        gonna respond , and write the topic's title name only that too in maximum 3-4 words : \n {question.question}"""
+        response_from_llm = model.invoke(prompt_for_title)
+        title = response_from_llm.content[0]['text']  # type: ignore
+
         await chat_collection.insert_one({
             "thread_id": thread_id,
+            "title": title,
             "user_email": user["email"],
             "created_at": datetime.now(UTC),
             "updated_at": datetime.now(UTC)
@@ -56,6 +63,7 @@ async def ask_question(graph,user, question):
     )
     return {
         "thread_id": thread_id,
+        "title" : title,
         "answer": result["messages"][-1].content
     }
 
@@ -70,9 +78,9 @@ async def get_users_chat(user):
         raise HTTPException(status_code=401,detail="Unauthorized user")
     try:
         chats = await chat_collection.find({"user_email" : user.get("email")},{"_id": 0}).sort("updated_at",-1).to_list(length=None)
-        if not chats:
-            raise HTTPException(status.HTTP_404_NOT_FOUND,detail="no chat sessions are available")
-        return chats
+        return chats if chats else []
+    except HTTPException:
+        raise
     except Exception as e:
         print(str(e))
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR,detail="something went wrong")

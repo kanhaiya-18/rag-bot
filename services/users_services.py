@@ -51,10 +51,16 @@ async def login(user:userLogin):
         raise HTTPException(401,detail="password is wrong")
     expires = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     # print(expires)
-    print(userExist["_id"])
+    # print(userExist["_id"])
     payload = {"_id" : str(userExist["_id"]),"exp" : expires}
     token = jwt.encode(payload,settings.SECRET_KEY,algorithm=settings.ALGORITHM)
     return {"token" : token}
     
-    
+async def user_details(user):
+    userExist = await user_collection.find_one({"email" : user.get("email")})
+    if not userExist: 
+        raise HTTPException(401,detail="user doesnt exist")
+    # print(user)
+    return user
+        
     

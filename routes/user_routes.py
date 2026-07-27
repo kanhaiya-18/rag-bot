@@ -1,11 +1,11 @@
 from fastapi import APIRouter,status,UploadFile,File,Depends,Request,BackgroundTasks
-from services.users_services import create_user,login
+from services.users_services import create_user,login,user_details
 from schemas.users import userCreate,userResponse,userLogin,authMW,QuestionSchema
 from services.uploadFile_services import upload_file,get_pdfs,delete_pdf
 from helpers.is_auth_helper import is_auth
 from services.response_services import ask_question,get_users_chat,get_history
 
-userRouter = APIRouter(prefix="/user")
+userRouter = APIRouter()
 
 @userRouter.post("/create",status_code=status.HTTP_201_CREATED)
 async def create_user_route(user: userCreate):
@@ -14,6 +14,10 @@ async def create_user_route(user: userCreate):
 @userRouter.post("/login",status_code=status.HTTP_200_OK)
 async def login_route(user: userLogin):
     return await login(user)
+
+@userRouter.get("/user-details",status_code=status.HTTP_200_OK)
+async def user_details_route(user:authMW = Depends(is_auth)):
+    return await user_details(user)
 
 @userRouter.post("/upload-file",status_code=status.HTTP_201_CREATED)
 async def upload_file_route(background_task: BackgroundTasks,file: UploadFile=File(...),user:authMW = Depends(is_auth)):

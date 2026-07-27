@@ -51,7 +51,7 @@ async def upload_file(background_task: BackgroundTasks,user ,file: UploadFile = 
         raise HTTPException(500,detail="couldnt read file")
         #upload in cloudinary
     try:
-        upload_result_cloudinary = upload_in_cloudinary(pdf_bytes)
+        upload_result_cloudinary = upload_in_cloudinary(pdf_bytes, file.filename)
     except Exception as e:
         raise HTTPException(500,detail="couldnt upload on cloudinary")
     # print("3.cloudinary done")
@@ -100,12 +100,14 @@ async def get_pdfs(user):
     user_exist = await user_collection.find_one({"email" : user["email"]})
     if not user_exist :
         raise HTTPException(400,detail="user doesnt exist")
-    pdfs = await documets.find({"user_id" : user.get("email")},{"_id": 0,"file_name": 1,"file_url": 1,"public_id": 1}).to_list(length=None)
-
-    
+    pdfs = await documets.find({"user_id" : user.get("email")}).to_list(length=None)
 
     if not pdfs:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="no pdfs are uploaded")
+        return []
+
+    for doc in pdfs:
+        doc["_id"] = str(doc["_id"])
+        doc["id"] = doc["_id"]
 
     return pdfs
 
@@ -123,18 +125,26 @@ async def delete_pdf(file_id:str,user):
     if not file_details:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="file not found")
     try: 
-        delete_qdrant_chunks(file_id,user.get("email"))
+        try:
+            delete_qdrant_chunks(file_id,user.get("email"))
+        except Exception as q_err:
+            print("Qdrant delete warning:", q_err)
 
         #delete from cloudinary 
-        del_cloudinary = cloudinary.uploader.destroy(file_details.get("public_id"),resource_type="raw")
-        if not del_cloudinary:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail="file couldnt delete")
+        if file_details.get("public_id"):
+            try:
+                cloudinary.uploader.destroy(file_details.get("public_id"),resource_type="raw")
+            except Exception as c_err:
+                print("Cloudinary delete warning:", c_err)
+
         #delete from mongo
         del_mongo = await documets.find_one_and_delete({"_id" : doc_obj_id})
         if not del_mongo:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="could not delete")
         return {"msg" : f"file deleted successfully with id {file_id}"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         print(str(e))
         raise HTTPException(500,detail="couldn't delete the file")

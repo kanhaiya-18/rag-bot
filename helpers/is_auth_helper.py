@@ -19,5 +19,5 @@ async def is_auth(request:Request,db: AsyncIOMotorDatabase=Depends(get_db)):
     if not user: 
         raise HTTPException(401, detail="unauthorized user")
     # print(user)
-    
+    user["_id"] = str(user["_id"])
     return user
