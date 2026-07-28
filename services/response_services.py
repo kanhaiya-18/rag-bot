@@ -4,6 +4,8 @@ from langchain_core.messages import HumanMessage
 from uuid import uuid4
 from db.database import user_collection,chat_collection
 from datetime import datetime,UTC
+import psycopg
+from core.config import settings
 
 async def ask_question(graph,user, question):
 
@@ -114,3 +116,49 @@ async def get_history(graph,thread_id:str,user):
     }
     
 
+async def delete_chat(thread_id: str, user):
+    user_exist = await user_collection.find_one({"email": user.get("email")})
+    if not user_exist:
+        raise HTTPException(status_code=401, detail="Unauthorized user")
+    
+    chat_session = await chat_collection.find_one({
+        "thread_id": thread_id,
+        "user_email": user.get("email")
+    })
+    if not chat_session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat session not found")
+
+    # 1. Delete thread document from MongoDB
+    await chat_collection.delete_one({"thread_id": thread_id, "user_email": user.get("email")})
+
+    # 2. Delete thread checkpoints from PostgreSQL
+    try:
+        async with await psycopg.AsyncConnection.connect(settings.POSTGRES_URL) as conn:
+            async with conn.cursor() as cur:
+                await cur.execute("DELETE FROM checkpoints WHERE thread_id = %s", (thread_id,))
+                await cur.execute("DELETE FROM checkpoint_blobs WHERE thread_id = %s", (thread_id,))
+                await cur.execute("DELETE FROM checkpoint_writes WHERE thread_id = %s", (thread_id,))
+                await conn.commit()
+    except Exception as pg_err:
+        print(f"PostgreSQL checkpoint deletion warning for thread {thread_id}:", pg_err)
+
+    return {"msg": "Chat deleted successfully", "thread_id": thread_id}
+
+async def rename_chat(thread_id: str, new_title: str, user):
+    user_exist = await user_collection.find_one({"email": user.get("email")})
+    if not user_exist:
+        raise HTTPException(status_code=401, detail="Unauthorized user")
+
+    chat_session = await chat_collection.find_one({
+        "thread_id": thread_id,
+        "user_email": user.get("email")
+    })
+    if not chat_session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat session not found")
+
+    await chat_collection.update_one(
+        {"thread_id": thread_id, "user_email": user.get("email")},
+        {"$set": {"title": new_title, "updated_at": datetime.now(UTC)}}
+    )
+    return {"msg": "Chat renamed successfully", "thread_id": thread_id, "title": new_title}
+    

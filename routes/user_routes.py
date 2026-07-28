@@ -1,9 +1,9 @@
 from fastapi import APIRouter,status,UploadFile,File,Depends,Request,BackgroundTasks
 from services.users_services import create_user,login,user_details
-from schemas.users import userCreate,userResponse,userLogin,authMW,QuestionSchema
+from schemas.users import userCreate,userResponse,userLogin,authMW,QuestionSchema,RenameChatSchema
 from services.uploadFile_services import upload_file,get_pdfs,delete_pdf
 from helpers.is_auth_helper import is_auth
-from services.response_services import ask_question,get_users_chat,get_history
+from services.response_services import ask_question,get_users_chat,get_history,delete_chat,rename_chat
 
 userRouter = APIRouter()
 
@@ -43,3 +43,11 @@ async def get_pdfs_route(user: authMW = Depends(is_auth)):
 @userRouter.delete("/delete-pdf/{file_id}",status_code=status.HTTP_200_OK)
 async def delete_pdf_route(file_id:str,user: authMW = Depends(is_auth)):
     return await delete_pdf(file_id,user)
+
+@userRouter.delete("/delete-chat/{thread_id}",status_code=status.HTTP_200_OK)
+async def delete_chat_route(thread_id: str,user: authMW = Depends(is_auth)):
+    return await delete_chat(thread_id,user)
+
+@userRouter.put("/rename-chat/{thread_id}",status_code=status.HTTP_200_OK)
+async def rename_chat_route(thread_id: str,body: RenameChatSchema,user: authMW = Depends(is_auth)):
+    return await rename_chat(thread_id,body.title,user)
