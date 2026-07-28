@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
 
         yield
 
-origins = ["http://localhost:5173", "http://10.147.189.8:5173"]
+origins = ["https://ragchatbot-cgph.onrender.com", "http://10.147.189.8:5173"]
 
 app = FastAPI(lifespan=lifespan)
 
