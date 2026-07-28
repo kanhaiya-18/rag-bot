@@ -1,7 +1,7 @@
 from fastapi import APIRouter,status,UploadFile,File,Depends,Request,BackgroundTasks
 from services.users_services import create_user,login,user_details
 from schemas.users import userCreate,userResponse,userLogin,authMW,QuestionSchema,RenameChatSchema
-from services.uploadFile_services import upload_file,get_pdfs,delete_pdf
+from services.uploadFile_services import upload_file,get_pdfs,delete_pdf,download_pdf_file
 from helpers.is_auth_helper import is_auth
 from services.response_services import ask_question,get_users_chat,get_history,delete_chat,rename_chat
 
@@ -39,6 +39,10 @@ async def get_history_route(request: Request,thread_id: str,user: authMW = Depen
 @userRouter.get("/get-pdfs",status_code=status.HTTP_200_OK)
 async def get_pdfs_route(user: authMW = Depends(is_auth)):
     return await get_pdfs(user)
+
+@userRouter.get("/download-pdf/{file_id}",status_code=status.HTTP_200_OK)
+async def download_pdf_route(file_id: str, user: authMW = Depends(is_auth)):
+    return await download_pdf_file(file_id, user)
 
 @userRouter.delete("/delete-pdf/{file_id}",status_code=status.HTTP_200_OK)
 async def delete_pdf_route(file_id:str,user: authMW = Depends(is_auth)):

@@ -1,7 +1,11 @@
+import io
+import zipfile
+import urllib.request
+import cloudinary.utils
 from utils.cloudinary_config import cloudinary_config
-from fastapi import UploadFile,File,HTTPException ,status, BackgroundTasks
-from db.database import documets,user_collection
-from utils.vector_store import extract_text,split_text
+from fastapi import UploadFile, File, HTTPException, status, BackgroundTasks, Response
+from db.database import documets, user_collection
+from utils.vector_store import extract_text, split_text
 from utils.upload_cloudinary import upload_in_cloudinary
 from helpers.delete_from_qdrant import delete_qdrant_chunks
 import cloudinary.uploader
@@ -148,6 +152,60 @@ async def delete_pdf(file_id:str,user):
     except Exception as e:
         print(str(e))
         raise HTTPException(500,detail="couldn't delete the file")
+
+
+# Endpoint service to securely download a user's PDF
+async def download_pdf_file(file_id: str, user):
+    user_exist = await user_collection.find_one({"email": user["email"]})
+    if not user_exist:
+        raise HTTPException(status_code=400, detail="User does not exist")
+        
+    try:
+        doc_obj_id = ObjectId(file_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid Document ID format")
+
+    file_doc = await documets.find_one({"_id": doc_obj_id, "user_id": user.get("email")})
+    if not file_doc:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    public_id = file_doc.get("public_id")
+    file_name = file_doc.get("file_name", "document.pdf")
+    if not file_name.lower().endswith(".pdf"):
+        file_name += ".pdf"
+
+    if not public_id:
+        raise HTTPException(status_code=404, detail="File public ID missing")
+
+    try:
+        archive_url = cloudinary.utils.download_archive_url(
+            public_ids=[public_id],
+            resource_type="raw",
+            mode="download"
+        )
+        req = urllib.request.Request(archive_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req) as resp:
+            zip_bytes = resp.read()
+
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
+            names = z.namelist()
+            if not names:
+                raise HTTPException(status_code=500, detail="Empty archive from storage")
+            pdf_bytes = z.read(names[0])
+
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{file_name}"'
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Download PDF error: {e}")
+        raise HTTPException(status_code=500, detail="Could not download PDF from storage")
+
 
     
 
