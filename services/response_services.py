@@ -59,7 +59,8 @@ async def ask_question(graph,user, question):
                     content=question.question
                 )
             ],
-            "user_email": user["email"]
+            "user_email": user["email"],
+            "selected_doc_ids": question.selected_doc_ids
         },
         config=config
     )

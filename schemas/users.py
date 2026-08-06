@@ -29,6 +29,7 @@ class authMW(BaseModel):
 class QuestionSchema(BaseModel):
     question: str
     thread_id: str | None = None
+    selected_doc_ids: list[str] | None = None
 
 class RenameChatSchema(BaseModel):
     title: str
